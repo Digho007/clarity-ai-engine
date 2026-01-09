@@ -112,7 +112,7 @@ We welcome contributions to improve Clarity AI Engine. To contribute:
 - Create a new branch for your feature/bugfix.
 - Make your changes and submit a pull request with a detailed explanation.
 
-For feature requests, suggestions, or to report issues, please submit a [GitHub issue](https://github.com/<owner>/clarity-ai-engine/issues).
+For feature requests, suggestions, or to report issues, please submit a [GitHub issue](https://github.com/Digho007/clarity-ai-engine/issues).
 
 ---
 

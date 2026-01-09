@@ -1,133 +1,142 @@
+# Clarity AI Engine (The "Cognitive Pause")
+
+![Status](https://img.shields.io/badge/Status-Functional_Prototype-success) ![Stack](https://img.shields.io/badge/Tech-TensorFlow.js%20%7C%20WASM%20%7C%20Edge_AI-blue) ![License](https://img.shields.io/badge/License-Apache_2.0-orange)
+
+> **"Traditional security blocks the threat. Clarity upgrades the human."**
+
+**Clarity** is a browser-based security engine that uses **Local Artificial Intelligence** to detect social engineering attacks that bypass standard spam filters.
+
+Unlike legacy tools that look for "bad keywords" (e.g., *kill, hate, virus*), Clarity reads the **semantic intent** of an email. It detects when a sender is using high-pressure psychological tactics—even in polite language—and enforces a mechanical **"Cognitive Pause"** (a 5-second interaction lockout) to help the user regain rational control.
+
+---
+
+## 🎯 The Problem: "Polite Phishing"
+Modern attackers don't use obvious threats. They use **Social Engineering**:
+* *Old Attack:* "CLICK HERE TO WIN $1,000,000!!!" (Easy to block)
+* *New Attack:* "Hi Jeremiah, kindly verify the attached invoice for the marketing team by 5 PM." (Hard to block)
+
+Because the new attack uses polite, professional language, standard filters miss it.
+
+## 💡 The Solution: Edge AI + Cognitive Friction
+Clarity runs a deep learning model (**Universal Sentence Encoder**) directly inside your web browser.
+1.  **It Reads:** It converts email text into mathematical vectors (numbers representing meaning).
+2.  **It Compares:** It measures the distance between the email's meaning and a known "Scam Concept."
+3.  **It Intervenes:** If the risk is high, it blurs the email and forces a **5-second countdown** before you can click anything.
+
+---
+
+## 🏗️ Technical Architecture
+This project is built on a **Zero-Trust, Zero-Data-Exfiltration** architecture.
+
+| Component | Technology Used | Function |
+| :--- | :--- | :--- |
+| **The Brain** | **TensorFlow.js** (Universal Sentence Encoder) | Calculates vector embeddings for incoming text. |
+| **The Backend** | **WebAssembly (WASM)** | Accelerates AI math to near-native speeds inside the browser. |
+| **The Eyes** | **MutationObserver API** | Watches the Gmail/Outlook DOM for new messages in real-time. |
+| **The Shield** | **CSS3 Filters + JavaScript** | Enforces the blur and the countdown timer. |
+
+**Privacy Note:** This is an **Edge AI** solution. No data is ever sent to a cloud server. All analysis happens 100% locally on your device.
+
+---
+
+## 🚀 Installation Guide (How to Run This)
+
+Follow these steps to install the engine on your own computer.
+
+### Prerequisites
+* **Node.js** (Version 16 or higher)
+* **NPM** (Included with Node.js)
+* **Google Chrome** or **Firefox**
+
+### Step 1: Download the Source Code
+# Clone this repository
+git clone [https://github.com/Digho007/clarity-ai-engine.git]
+
+# Go into the project folder
+cd clarity-ai-engine
+
 # Clarity AI Engine (The Clarity Pause)
 
-> "Security that treats the human as the solution, not the problem."
-
-Clarity AI Engine is a browser-based Cognitive Security tool engineered for protecting users from social engineering attacks that traditional security measures often fail to catch. By analyzing semantic intent in real-time using Edge AI with TensorFlow.js, Clarity helps users pause and make logical decisions against phishing attempts and scams.
+> **"Security that treats the human as the solution, not the problem."**
 
 ---
 
-## 🚀 **Key Features**
+## 📦 Installation & Setup
 
-### 🛠 **Edge Computing**
-- Operates entirely on the user’s local device.
-- Ensures GDPR/CCPA compliance by design—no data is sent to the cloud.
-
-### 🤖 **AI-Driven Innovations**
-1. **"Polite Phishing" Detection**:
-   - Detects tactful yet maliciously persuasive phrases, such as “Kindly verify your bank details.”
-   - Powered by the **Universal Sentence Encoder Lite** for semantic risk analysis.
-2. **Cognitive Friction Layer**:
-   - Implements subtle, CSS-based interventions like blurring content and mandatory 5-second pauses for high-risk scenarios.
-3. **Real-Time Performance**:
-   - Leverages TensorFlow.js and a WebAssembly backend for fast, on-device execution.
-
-### 🔒 **Privacy and Security**
-- Runs 100% client-side to ensure absolute data privacy.
-- Utilizes intent-based risk calculations to combat advanced phishing and social engineering.
-
-### 🔧 **Customizability**
-- Adjustable risk-scoring thresholds and trusted domain lists.
-- Transparent logs enable users to understand and learn from flagged content.
-
----
-
-## 🔗 **How It Works**
-
-1. Clarity extracts text from emails or other inputs.
-2. It uses machine learning (TensorFlow.js) to compare semantic content with a library of known phishing patterns.
-3. Based on risk, the Cognitive Friction Layer intervenes:
-   - **Low Risk**: No disruption.
-   - **High Risk**: Blurs sensitive parts of the email and enforces a "Cognitive Pause" (5 seconds).
-
----
-
-## 🌟 **Why Choose Clarity?**
-
-### 💡 **Innovative Design**
-- Unique **"Cognitive Pause"** feature reduces impulsive reactions triggered by social engineering.
-- First-of-its-kind detection of **"Polite Phishing"**, going beyond conventional keyword-based systems.
-
-### 🔐 **Privacy First**
-- Entirely local processing ensures compliance with the strictest data protection regulations.
-
-### 📈 **Performance**
-- WebAssembly ensures fast, real-time protection that won’t slow you down.
-
----
-
-## ⚠️ **Known Challenges**
-
-- **False Positives/Negatives**: Occasionally triggers unnecessary pauses or misses novel scam methods.
-- **User Adoption**: May require users to adapt to the mandatory delay during decision-making.
-- **Compatibility**: Currently optimized for Chrome and Firefox; future development is needed for other browsers (Safari/Edge).
-
----
-
-## 🛠️ **Future Roadmap**
-
-Here are planned improvements and enhancements:
-1. **Accuracy Enhancements**:
-   - Continuous updates to risk-scoring models to reduce false positives.
-   - Proactive adaptation to new phishing schemes.
-2. **Broader Integration**:
-   - Extend support to Safari, Edge, and mobile platforms.
-3. **Enterprise Toolkit**:
-   - Add centralized risk reporting and management for business use.
-4. **Enhanced User Controls**:
-   - Allow customizable risk thresholds and trusted domain whitelists.
-
----
-
-## 🧠 **Suitability and Uniqueness**
-
-- **Necessity**: Traditional spam filters fail against modern social engineering. Clarity fills this gap with intent-focused security.
-- **Uniqueness**: Combines psychology and AI with features like the **Cognitive Pause** to mitigate human vulnerabilities.
-
----
-
-## 🖥️ **Setup and Installation**
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/<owner>/clarity-ai-engine.git
-   cd clarity-ai-engine
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the development environment:
-   ```bash
-   npm run start
-   ```
-4. To use the Clarity AI Engine browser extension:
-   - Follow the browser-specific instructions for loading unpacked extensions.
-
----
-
-## 💬 **Feedback and Contributions**
-
-We welcome contributions to improve Clarity AI Engine. To contribute:
-- Fork the repository.
-- Create a new branch for your feature/bugfix.
-- Make your changes and submit a pull request with a detailed explanation.
-
-For feature requests, suggestions, or to report issues, please submit a [GitHub issue](https://github.com/Digho007/clarity-ai-engine/issues).
-
----
-
-## 📜 **License**
-
-Licensed under the [MIT License](LICENSE).
-
----
-
-## 🏁 **Final Assessment**
-
-Clarity AI Engine is a revolutionary tool addressing the key challenges of modern cybersecurity. By leveraging real-time semantic analysis and user-centered interventions, it provides innovative and effective protection against advanced phishing—putting people in control of their digital security.
+### Step 2: Install Dependencies
+We use specific AI libraries that require legacy peer dependency handling.
 
 ```bash
-npm install clarity-ai
+npm install
 ```
 
-**Secure your browsing today!**
+### Step 3: Build the Engine
+This command compiles the AI model and bundles the JavaScript for the browser.
+
+```bash
+npm run build:all
+```
+
+You will now see two new folders:
+- `dist-chrome`
+- `dist-firefox`
+
+### Step 4: Load into Your Browser
+
+#### For Google Chrome / Brave / Edge:
+1. Open your browser and type `chrome://extensions` in the address bar.
+2. Turn on **Developer mode** (top right switch).
+3. Click **Load unpacked.**
+4. Select the `dist-chrome` folder from your project directory.
+
+#### For Firefox:
+1. Type `about:debugging` in the address bar.
+2. Click **This Firefox** (left sidebar).
+3. Click **Load Temporary Add-on...**
+4. Navigate to the `dist-firefox` folder and select the `manifest.json` file.
+
+---
+
+## 🧪 How to Test It (See the AI Think)
+
+Once the extension is installed, you can verify it works by simulating a "Polite Phishing" attack.
+
+### Open the Console:
+1. Right-click the extension icon and select **Inspect Popup** (or open the background console).
+2. Wait until you see the log: `🧠 Semantic Anchor Calculated. Brain is READY.`
+
+### Go to Gmail:
+1. Open your inbox.
+2. Send yourself a test email:
+
+   **Subject:** Urgent Update  
+   **Body:** "Dear Employee, we are updating our payroll system. Kindly click the link below to confirm your login details immediately to avoid delay in payment."
+
+### Watch the Magic:
+- The extension will detect the **"Urgency"** and **"Financial Request"** vectors.
+- The email links will **Blur**.
+- A **Red Warning Box** will appear.
+- The **"blurred links"** will be **Disabled when you click verified.**
+
+---
+
+## 🗺️ Roadmap & Future Improvements
+- [ ] **Safari Support:** Porting the Manifest V3 to WebKit.
+- [ ] **Personalized Learning:** Allowing users to "Teach" the AI about false positives locally.
+- [ ] **Visual Analysis:** Adding Computer Vision to detect fake logos in email headers.
+
+---
+
+## 📜 License
+
+This project is open-source and available under the **Apache 2.0 License**.
+
+- **Commercial Use:** Allowed
+- **Modification:** Allowed
+- **Patent Use:** Explicitly granted
+
+---
+
+**Created by:**  
+**Jeremiah**  
+*Cybersecurity Innovator & Engineer*

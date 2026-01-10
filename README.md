@@ -1,142 +1,109 @@
-# Clarity AI Engine (The "Cognitive Pause")
+# Clarity AI: The "Glass-Box" Phishing Detector
 
-![Status](https://img.shields.io/badge/Status-Functional_Prototype-success) ![Stack](https://img.shields.io/badge/Tech-TensorFlow.js%20%7C%20WASM%20%7C%20Edge_AI-blue) ![License](https://img.shields.io/badge/License-Apache_2.0-orange)
+**Clarity AI** is a next-generation browser extension that uses local, client-side Artificial Intelligence to detect, explain, and block sophisticated phishing attacks in real-time.
 
-> **"Traditional security blocks the threat. Clarity upgrades the human."**
-
-**Clarity** is a browser-based security engine that uses **Local Artificial Intelligence** to detect social engineering attacks that bypass standard spam filters.
-
-Unlike legacy tools that look for "bad keywords" (e.g., *kill, hate, virus*), Clarity reads the **semantic intent** of an email. It detects when a sender is using high-pressure psychological tactics—even in polite language—and enforces a mechanical **"Cognitive Pause"** (a 5-second interaction lockout) to help the user regain rational control.
+Unlike traditional "Black Box" security tools that simply block a page, Clarity uses **X-Ray Vision** to highlight exactly why an email is dangerous, training the user to recognize psychological triggers and social engineering tactics.
 
 ---
 
-## 🎯 The Problem: "Polite Phishing"
-Modern attackers don't use obvious threats. They use **Social Engineering**:
-* *Old Attack:* "CLICK HERE TO WIN $1,000,000!!!" (Easy to block)
-* *New Attack:* "Hi Jeremiah, kindly verify the attached invoice for the marketing team by 5 PM." (Hard to block)
+## 🚀 Key Features
 
-Because the new attack uses polite, professional language, standard filters miss it.
+- **👁️ X-Ray Vision (Explainable AI):** Instead of a generic warning, Clarity highlights specific trigger words (e.g., "wire transfer," "log in via Facebook") directly in the email body, teaching users to spot scams.
 
-## 💡 The Solution: Edge AI + Cognitive Friction
-Clarity runs a deep learning model (**Universal Sentence Encoder**) directly inside your web browser.
-1.  **It Reads:** It converts email text into mathematical vectors (numbers representing meaning).
-2.  **It Compares:** It measures the distance between the email's meaning and a known "Scam Concept."
-3.  **It Intervenes:** If the risk is high, it blurs the email and forces a **5-second countdown** before you can click anything.
+- **🧠 Hybrid Brain Architecture:** Combines Semantic Intent Analysis (TensorFlow.js) with Heuristic Checks (Link Reputation) to catch "polite" phishing attacks that bypass standard spam filters.
 
----
+- **🔒 Privacy-First (Edge AI):** All analysis happens locally in your browser memory. Your private emails never leave your device and are never sent to a cloud server.
 
-## 🏗️ Technical Architecture
-This project is built on a **Zero-Trust, Zero-Data-Exfiltration** architecture.
+- **🛡️ Zero-Click Defense:** Automatically blurs dangerous links and input fields the moment a threat is detected, preventing accidental clicks.
 
-| Component | Technology Used | Function |
-| :--- | :--- | :--- |
-| **The Brain** | **TensorFlow.js** (Universal Sentence Encoder) | Calculates vector embeddings for incoming text. |
-| **The Backend** | **WebAssembly (WASM)** | Accelerates AI math to near-native speeds inside the browser. |
-| **The Eyes** | **MutationObserver API** | Watches the Gmail/Outlook DOM for new messages in real-time. |
-| **The Shield** | **CSS3 Filters + JavaScript** | Enforces the blur and the countdown timer. |
-
-**Privacy Note:** This is an **Edge AI** solution. No data is ever sent to a cloud server. All analysis happens 100% locally on your device.
+- **🎯 Targeted Scanning:** Intelligently identifies email containers (Gmail, Outlook, Webmail) to scan only the relevant message content, ignoring sidebars and ads.
 
 ---
 
-## 🚀 Installation Guide (How to Run This)
-
-Follow these steps to install the engine on your own computer.
+## 🛠️ Installation & Setup
 
 ### Prerequisites
-* **Node.js** (Version 16 or higher)
-* **NPM** (Included with Node.js)
-* **Google Chrome** or **Firefox**
 
-### Step 1: Download the Source Code
-# Clone this repository
-git clone [https://github.com/Digho007/clarity-ai-engine.git]
+- Node.js and npm installed.
+- Google Chrome (or Chromium-based browser).
 
-# Go into the project folder
-cd clarity-ai-engine
-
-# Clarity AI Engine (The Clarity Pause)
-
-> **"Security that treats the human as the solution, not the problem."**
-
----
-
-## 📦 Installation & Setup
-
-### Step 2: Install Dependencies
-We use specific AI libraries that require legacy peer dependency handling.
+### 1. Clone & Install
 
 ```bash
+git clone https://github.com/Digho007/clarity-ai.git
+cd clarity-ai
 npm install
 ```
 
-### Step 3: Build the Engine
-This command compiles the AI model and bundles the JavaScript for the browser.
+### 2. Build the Extension
+
+This compiles the TensorFlow models and bundles the scripts.
 
 ```bash
 npm run build:all
 ```
 
-You will now see two new folders:
-- `dist-chrome`
-- `dist-firefox`
+### 3. Load into Chrome
 
-### Step 4: Load into Your Browser
-
-#### For Google Chrome / Brave / Edge:
-1. Open your browser and type `chrome://extensions` in the address bar.
-2. Turn on **Developer mode** (top right switch).
-3. Click **Load unpacked.**
-4. Select the `dist-chrome` folder from your project directory.
-
-#### For Firefox:
-1. Type `about:debugging` in the address bar.
-2. Click **This Firefox** (left sidebar).
-3. Click **Load Temporary Add-on...**
-4. Navigate to the `dist-firefox` folder and select the `manifest.json` file.
+1. Open Chrome and navigate to `chrome://extensions`.
+2. Toggle **Developer mode** (top right corner) to ON.
+3. Click **Load unpacked**.
+4. Select the `dist-chrome` (or `public`) folder from your project directory.
 
 ---
 
-## 🧪 How to Test It (See the AI Think)
+## 🖥️ Usage
 
-Once the extension is installed, you can verify it works by simulating a "Polite Phishing" attack.
+1. **Open an Email:** Navigate to Gmail, Outlook, or your preferred webmail provider.
+2. **Automatic Scan:** Clarity automatically scans the Subject and Body of the open email.
 
-### Open the Console:
-1. Right-click the extension icon and select **Inspect Popup** (or open the background console).
-2. Wait until you see the log: `🧠 Semantic Anchor Calculated. Brain is READY.`
+### Status Indicators:
+- **Safe:** The extension remains silent.
+- **Threat Detected:**
+  - A **Red Warning Box** appears explaining the verdict.
+  - Links and buttons are **Blurred/Locked**.
+  - Suspicious keywords are **Highlighted in Red** (X-Ray Vision).
 
-### Go to Gmail:
-1. Open your inbox.
-2. Send yourself a test email:
-
-   **Subject:** Urgent Update  
-   **Body:** "Dear Employee, we are updating our payroll system. Kindly click the link below to confirm your login details immediately to avoid delay in payment."
-
-### Watch the Magic:
-- The extension will detect the **"Urgency"** and **"Financial Request"** vectors.
-- The email links will **Blur**.
-- A **Red Warning Box** will appear.
-- The **"blurred links"** will be **Disabled when you click verified.**
+3. **Popup Dashboard:** Click the extension icon in the toolbar to see the current risk score and analysis details.
 
 ---
 
-## 🗺️ Roadmap & Future Improvements
-- [ ] **Safari Support:** Porting the Manifest V3 to WebKit.
-- [ ] **Personalized Learning:** Allowing users to "Teach" the AI about false positives locally.
-- [ ] **Visual Analysis:** Adding Computer Vision to detect fake logos in email headers.
+## 🏗️ Technical Architecture
+
+Clarity operates on a **Manifest V3 architecture**:
+
+### **The Eyes (content.js):**
+- Uses strict DOM selectors to find email bodies.
+- Extracts text and links.
+- Injects visual alerts and performs the X-Ray text highlighting.
+
+### **The Brain (background.js):**
+- Loads the **Universal Sentence Encoder (USE)** model via TensorFlow.js.
+- Calculates a **"Semantic Similarity Score"** against known threat anchors (e.g., financial urgency, credential theft).
+- Performs heuristic analysis on link domains (IP checks, shorteners).
+- Returns a weighted risk score to the content script.
 
 ---
 
-## 📜 License
+## 📊 The "Hybrid" Logic
 
-This project is open-source and available under the **Apache 2.0 License**.
+Clarity uses a **3-Way Defense Matrix** to determine threats:
 
-- **Commercial Use:** Allowed
-- **Modification:** Allowed
-- **Patent Use:** Explicitly granted
+1. **Text Override:** If semantic intent > 0.60 (e.g., "Wire money now"), it blocks regardless of links.
+2. **Link Override:** If a link is toxic (e.g., raw IP address), it blocks regardless of text.
+3. **Smart Match:** If text is suspicious (> 0.45) AND links are unverified, it blocks *"Polite Phishing."*
 
 ---
 
-**Created by:**  
-**Jeremiah**  
-*Cybersecurity Innovator & Engineer*
+## 🔒 Privacy Policy
+
+Clarity AI is designed with a **Privacy-First** philosophy:
+- **No Data Collection:** We do not collect, store, or transmit your email content.
+- **Local Processing:** All AI inference runs on your machine using the CPU/GPU via WebGL.
+- **No Tracking:** We do not track your browsing history or personal information.
+
+---
+
+## 📄 License
+
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.

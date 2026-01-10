@@ -43,12 +43,19 @@ This compiles the TensorFlow models and bundles the scripts.
 npm run build:all
 ```
 
-### 3. Load into Chrome
+### 3. Browser Loading
 
-1. Open Chrome and navigate to `chrome://extensions`.
-2. Toggle **Developer mode** (top right corner) to ON.
-3. Click **Load unpacked**.
-4. Select the `dist-chrome` (or `public`) folder from your project directory.
+#### For Google Chrome / Brave / Edge:
+1. Open your browser and type `chrome://extensions` in the address bar.
+2. Turn on **Developer mode** (top right switch).
+3. Click **Load unpacked.**
+4. Select the `dist-chrome` folder from your project directory.
+
+#### For Firefox:
+1. Type `about:debugging` in the address bar.
+2. Click **This Firefox** (left sidebar).
+3. Click **Load Temporary Add-on...**
+4. Navigate to the `dist-firefox` folder and select the `manifest.json` file.
 
 ---
 

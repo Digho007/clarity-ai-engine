@@ -1,13 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "Clarity AI Engine",
+  "name": "Clarity AI Ensemble",
   "version": "1.0",
-  "description": "Browser-based TensorFlow.js Threat Detection",
   "permissions": ["activeTab", "scripting"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "run_at": "document_idle"
     }
-  ]
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
 }

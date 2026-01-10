@@ -2,124 +2,93 @@ import * as tf from '@tensorflow/tfjs';
 import '@tensorflow/tfjs-backend-cpu';
 import * as use from '@tensorflow-models/universal-sentence-encoder';
 
-// POLYFILL
-if (typeof window === 'undefined') {
-  self.window = self;
-}
+if (typeof window === 'undefined') { self.window = self; }
 
-console.log("🧠 Clarity Ensemble Brain: INITIALIZING...");
+console.log("🧠 Clarity Engine: INITIALIZING...");
 
 let model = null;
-let anchorTensors = {}; // Stores multiple vectors
+let anchorTensors = {};
 
-// --- THE ROBUST DEFENSE: MULTI-VECTOR ANCHORS ---
-// We define specific concepts for different types of attacks.
 const ANCHOR_TEXTS = {
-  finance: "Urgent request to verify bank account details, wire transfer, update payment information, or avoid financial loss.",
-  job: "Job offer from luxury brand requiring login via Facebook or social media. High salary remote work opportunity asking for personal details.",
-  security: "Your account has been compromised. Click link to reset password immediately. Suspicious login attempt detected.",
-  urgency: "Immediate action required. Do not ignore this message. Final notice before account suspension."
+  login: "Please log in to your account. Click here to sign in. Verify your credentials. Job offer requiring login via Facebook or social media.",
+  money: "Wire transfer required. Update payment details. Credit card verification needed. Urgent request to avoid financial loss."
 };
 
 async function loadModel() {
-  console.log("🧠 Loading TensorFlow Model...");
-
-  try {
-    await tf.setBackend('cpu');
-    await tf.ready();
-    
-    model = await use.load();
-    
-    // BATCH EMBEDDING: Convert all anchors to math at once
-    console.log("🧠 Calculating Ensemble Vectors...");
-    
-    // 1. Finance Vector
-    const financeEmb = await model.embed([ANCHOR_TEXTS.finance]);
-    anchorTensors.finance = financeEmb.squeeze();
-
-    // 2. Job Vector (Fixes Louis Vuitton)
-    const jobEmb = await model.embed([ANCHOR_TEXTS.job]);
-    anchorTensors.job = jobEmb.squeeze();
-
-    // 3. Security Vector
-    const secEmb = await model.embed([ANCHOR_TEXTS.security]);
-    anchorTensors.security = secEmb.squeeze();
-
-    // 4. Urgency Vector
-    const urgEmb = await model.embed([ANCHOR_TEXTS.urgency]);
-    anchorTensors.urgency = urgEmb.squeeze();
-    
-    console.log("🧠 All Neural Heads Ready.");
-    
-    // Cleanup temporary tensors
-    financeEmb.dispose(); jobEmb.dispose(); secEmb.dispose(); urgEmb.dispose();
-
-  } catch (err) {
-    console.error("🔥 Brain Initialization Failed:", err);
-  }
+  await tf.setBackend('cpu');
+  await tf.ready();
+  model = await use.load();
+  anchorTensors.login = (await model.embed([ANCHOR_TEXTS.login])).squeeze();
+  anchorTensors.money = (await model.embed([ANCHOR_TEXTS.money])).squeeze();
+  console.log("🧠 Engine Ready.");
 }
-
 loadModel();
 
-// Cosine Similarity Math
-function calculateSimilarity(vectorA, vectorB) {
+function calculateSimilarity(vecA, vecB) {
   return tf.tidy(() => {
-    const dotProduct = tf.sum(tf.mul(vectorA, vectorB));
-    const normA = tf.norm(vectorA);
-    const normB = tf.norm(vectorB);
-    return dotProduct.div(tf.mul(normA, normB)).dataSync()[0];
+    const dot = tf.sum(tf.mul(vecA, vecB));
+    const nA = tf.norm(vecA);
+    const nB = tf.norm(vecB);
+    return dot.div(tf.mul(nA, nB)).dataSync()[0];
   });
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "analyze_text") {
-    
-    // Check if all heads are ready
-    if (!model || Object.keys(anchorTensors).length < 4) {
-      console.log("⚠️ Brain is warming up...");
-      return true; 
-    }
+function analyzeLinks(links) {
+  if (!links || links.length === 0) return 0;
+  let score = 0;
+  const safe = ['linkedin.com', 'google.com', 'microsoft.com', 'zoom.us', 'facebook.com', 'louisvuitton.com'];
+  
+  links.forEach(link => {
+    try {
+      const url = new URL(link);
+      if (/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(url.hostname)) score += 5; // IP Address
+      if (url.hostname.includes('bit.ly') || url.hostname.includes('tinyurl')) score += 3; // Shortener
+      const isSafe = safe.some(d => url.hostname.endsWith(d));
+      if (!isSafe) score += 2; // Unknown domain
+    } catch (e) { score += 1; }
+  });
+  return Math.min(score, 10);
+}
 
-    console.log(`🧠 Scanning content (${request.text.length} chars)...`);
-    
-    model.embed([request.text]).then(embeddings => {
-      const emailVector = embeddings.squeeze();
-      
-      // --- ENSEMBLE CHECK ---
-      // We check the email against ALL 4 anchors and take the HIGHEST score.
-      
-      const scores = {
-        finance: calculateSimilarity(anchorTensors.finance, emailVector),
-        job: calculateSimilarity(anchorTensors.job, emailVector),
-        security: calculateSimilarity(anchorTensors.security, emailVector),
-        urgency: calculateSimilarity(anchorTensors.urgency, emailVector)
-      };
+chrome.runtime.onMessage.addListener((req, sender, sendResponse) => {
+  if (req.action === "analyze_context" && model) {
+    model.embed([req.text]).then(embeddings => {
+      const vec = embeddings.squeeze();
+      const loginScore = calculateSimilarity(anchorTensors.login, vec);
+      const moneyScore = calculateSimilarity(anchorTensors.money, vec);
+      const intentScore = Math.max(loginScore, moneyScore);
+      const linkScore = analyzeLinks(req.links);
 
-      // Find the Max Score
-      const maxRawScore = Math.max(scores.finance, scores.job, scores.security, scores.urgency);
-      
-      // Determine which category triggered the alarm (for debugging)
-      const detectedCategory = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+      let isThreat = false;
+      let finalScore = 0;
+      let verdict = "Safe";
 
-      // Scale Score (0.3 -> 0.8 scale mapped to 0 -> 10)
-      let riskScore = (maxRawScore - 0.3) * 20;
-      if (riskScore < 0) riskScore = 0;
-      if (riskScore > 10) riskScore = 10;
+      // --- THE 3-WAY DECISION ---
       
-      console.log(`🧠 ANALYSIS RESULT:`);
-      console.log(`   - Highest Match: [${detectedCategory.toUpperCase()}]`);
-      console.log(`   - Raw Similarity: ${maxRawScore.toFixed(3)}`);
-      console.log(`   - Final Risk Score: ${riskScore.toFixed(1)}`);
+      // 1. Text is OBVIOUSLY bad (e.g. "Log in via Facebook")
+      if (intentScore > 0.60) {
+        isThreat = true;
+        finalScore = intentScore * 10;
+        verdict = "High-Risk Language (Scam Intent)";
+      }
+      // 2. Link is OBVIOUSLY bad (e.g. IP address)
+      else if (linkScore >= 4) {
+        isThreat = true;
+        finalScore = 8.5;
+        verdict = "Dangerous Link Detected";
+      }
+      // 3. Smart Combo (Text is weird + Link is weird)
+      else if (intentScore > 0.45 && linkScore >= 2) {
+        isThreat = true;
+        finalScore = (intentScore * 10) + linkScore;
+        verdict = "Suspicious Request + Unverified Link";
+      }
 
-      // ROBUST THRESHOLD: 0.50
-      const isThreat = maxRawScore > 0.50; 
-
-      sendResponse({ isThreat: isThreat, score: riskScore.toFixed(1), category: detectedCategory });
-      
-      emailVector.dispose(); 
-      embeddings.dispose();
+      sendResponse({ isThreat, score: finalScore.toFixed(1), verdict });
+      vec.dispose(); embeddings.dispose();
     });
-
-    return true; 
+    return true;
   }
 });
+
+setInterval(() => { chrome.runtime.getPlatformInfo(() => {}); }, 20000);

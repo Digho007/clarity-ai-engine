@@ -1,144 +1,194 @@
-console.log("👁️ Clarity Eyes: WATCHING...");
+console.log("🚀 Clarity X-Ray: LOADED");
 
-function findEmailBody() {
-  const gmail = document.querySelector('.a3s');
-  if (gmail) return gmail;
-  const generic = document.querySelector('[aria-label="Message body"]');
-  if (generic) return generic;
-  return null;
-}
+// --- 1. CONFIGURATION: TRIGGER WORDS ---
+// These are the words the X-Ray looks for to explain the threat
+const TRIGGER_WORDS = [
+  /verify your account/gi, /verify your identity/gi, /update your payment/gi,
+  /log in/gi, /login/gi, /sign in/gi, /bank account/gi, /wire transfer/gi,
+  /suspended/gi, /deactivated/gi, /urgent/gi, /immediate action/gi,
+  /click here/gi, /social media/gi, /facebook/gi, /password/gi,
+  /credential/gi, /security alert/gi, /unauthorized/gi
+];
 
-function scanEmail() {
-  const container = findEmailBody();
-  
-  // STOP if: 
-  // 1. No email found
-  // 2. Already checked
-  // 3. Already verified (Unlocked)
-  // 4. Currently being scanned (PREVENTS THE RE-BLUR BUG)
-  if (!container || 
-      container.classList.contains('clarity-checked') || 
-      container.classList.contains('clarity-verified') ||
-      container.classList.contains('clarity-scanning')) {
-    return;
+// --- 2. SELECTOR STRATEGY ---
+function getEmailData() {
+  let container = null;
+  let subject = "No Subject";
+  let body = "";
+
+  // GMAIL (Try standard view first, then split view)
+  const gmailBody = document.querySelector('.a3s.aiL') || document.querySelector('.a3s'); 
+  const gmailSubject = document.querySelector('h2.hP');
+
+  // OUTLOOK
+  const outlookBody = document.querySelector('[aria-label="Message body"]');
+  const outlookSubject = document.querySelector('.conv-title');
+
+  // GENERIC
+  const genericBody = document.querySelector('.message-body, .msg-body, article');
+
+  if (gmailBody) {
+    container = gmailBody;
+    if (gmailSubject) subject = gmailSubject.innerText;
+    body = container.innerText;
+  } else if (outlookBody) {
+    container = outlookBody;
+    if (outlookSubject) subject = outlookSubject.innerText;
+    body = container.innerText;
+  } else if (genericBody) {
+    container = genericBody;
+    body = container.innerText;
+  } else {
+    return null;
   }
 
-  const text = container.innerText;
-  if (text.length < 50) return;
+  return { container, subject, body };
+}
 
-  // 1. MARK AS "IN PROGRESS"
+// --- 3. THE SCANNER ---
+function scan() {
+  const data = getEmailData();
+  if (!data) return;
+
+  const { container, subject, body } = data;
+
+  if (container.classList.contains('clarity-checked') || 
+      container.classList.contains('clarity-scanning')) return;
+
+  // VISUALS
   container.classList.add('clarity-scanning');
-  console.log(`👁️ Scanning... Length: ${text.length}`);
-  
-  chrome.runtime.sendMessage({ action: "analyze_text", text: text }, (response) => {
-    // 2. REMOVE "IN PROGRESS" MARKER
+  showBadge();
+  console.log(`👁️ X-RAY SCAN: ${subject}`);
+
+  const fullText = `Subject: ${subject}\n\n${body}`;
+  const links = Array.from(container.querySelectorAll('a')).map(a => a.href);
+
+  chrome.runtime.sendMessage({ 
+    action: "analyze_context", 
+    text: fullText, 
+    links: links 
+  }, (res) => {
     container.classList.remove('clarity-scanning');
-    
-    // 3. MARK AS CHECKED
     container.classList.add('clarity-checked');
+    hideBadge();
 
-    if (chrome.runtime.lastError) return;
-
-    // 4. CRITICAL SAFETY CHECK
-    // If you unlocked the email while the AI was thinking, STOP HERE.
-    if (container.classList.contains('clarity-verified')) {
-      console.log("🛡️ Email was verified by user. Skipping blur.");
-      return; 
-    }
-
-    if (response && response.isThreat) {
-      console.log("🚨 PHISHING DETECTED! BLURRING.");
+    if (res && res.isThreat) {
+      console.log(`🚨 THREAT DETECTED: Executing X-Ray Highlights...`);
+      
+      // A. Lock the Links
       applyBlur(container);
-      showWarning(container, response.score);
+      
+      // B. Show the Warning (with explanation)
+      showWarning(container, res.score, res.verdict);
+      
+      // C. HIGHLIGHT THE TRIGGERS (The New X-Ray Feature)
+      highlightTriggers(container);
     }
   });
 }
 
-// --- BLUR LOGIC ---
-function applyBlur(container) {
-  const elements = container.querySelectorAll('a, button');
-  elements.forEach(el => {
-    el.style.filter = "blur(6px)";
-    el.style.pointerEvents = "none";
-    el.style.transition = "filter 0.3s";
-    el.classList.add('clarity-blurred-item'); // Mark for easy removal
+// --- 4. THE X-RAY HIGHLIGHTER ---
+function highlightTriggers(rootElement) {
+  const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null, false);
+  let node;
+  const nodesToReplace = [];
+
+  // Find text nodes with bad words
+  while (node = walker.nextNode()) {
+    const text = node.nodeValue;
+    // Skip scripts/styles
+    if (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE') continue;
+
+    const hasTrigger = TRIGGER_WORDS.some(regex => regex.test(text));
+    if (hasTrigger) {
+      nodesToReplace.push(node);
+    }
+  }
+
+  // Apply highlights
+  nodesToReplace.forEach(textNode => {
+    const span = document.createElement('span');
+    span.innerHTML = textNode.nodeValue;
+    
+    TRIGGER_WORDS.forEach(regex => {
+      span.innerHTML = span.innerHTML.replace(regex, (match) => {
+        return `<span style="background-color: #fadbd8; border-bottom: 2px solid #c0392b; color: #c0392b; font-weight: bold; padding: 0 2px; border-radius: 2px;">${match}</span>`;
+      });
+    });
+
+    if (textNode.parentNode) {
+      textNode.parentNode.replaceChild(span, textNode);
+    }
   });
 }
 
-function unblur(container) {
-  const elements = container.querySelectorAll('.clarity-blurred-item');
-  elements.forEach(el => {
-    el.style.filter = "none";
-    el.style.pointerEvents = "auto";
-    el.classList.remove('clarity-blurred-item');
+// --- 5. UI HELPERS ---
+
+function showBadge() {
+  if (document.getElementById('cl-badge')) return;
+  const b = document.createElement('div');
+  b.id = 'cl-badge';
+  b.innerText = "🛡️ AI Scanning...";
+  b.style.cssText = "position:fixed; bottom:20px; right:20px; background:#f1c40f; color:#333; padding:8px 12px; border-radius:20px; font-weight:bold; z-index:9999; font-family:sans-serif; font-size:12px; box-shadow:0 2px 5px rgba(0,0,0,0.2);";
+  document.body.appendChild(b);
+}
+
+function hideBadge() { document.getElementById('cl-badge')?.remove(); }
+
+function applyBlur(el) {
+  el.querySelectorAll('a, button, input').forEach(i => {
+    i.style.filter = "blur(5px)";
+    i.style.pointerEvents = "none";
   });
 }
 
-// --- UI OVERLAY (With Cognitive Pause Timer) ---
-function showWarning(container, score) {
-  // Prevent duplicate alerts
-  if (document.getElementById('clarity-alert-box')) return;
+function showWarning(container, score, verdict) {
+  if (document.getElementById('cl-alert')) return;
 
   const alert = document.createElement('div');
-  alert.id = 'clarity-alert-box';
+  alert.id = 'cl-alert';
   alert.style.cssText = `
-    position: fixed; top: 80px; right: 20px; width: 320px;
-    background: white; color: #333; padding: 20px; 
-    z-index: 999999; border-radius: 12px; font-family: sans-serif;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.3); 
-    border-left: 6px solid #e74c3c;
-    animation: slideIn 0.3s ease-out;
+    position: fixed; top: 100px; right: 20px; width: 320px;
+    background: white; padding: 20px; border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4); border-left: 6px solid #c0392b;
+    z-index: 2147483647; font-family: sans-serif; animation: slideIn 0.3s;
   `;
-
+  
   alert.innerHTML = `
-    <h3 style="margin:0 0 8px 0; color: #c0392b; font-size: 18px;">⚠️ Phishing Detected</h3>
-    <p style="margin:0 0 15px 0; font-size:14px; color: #555; line-height: 1.4;">
-      This email uses high-pressure language typical of social engineering.
-    </p>
-    
-    <div style="background: #f8f9fa; padding: 10px; border-radius: 6px; font-size: 12px; color: #666; margin-bottom: 15px;">
-      <strong>Risk Score:</strong> <span style="color:#e74c3c; font-weight:bold;">${score}</span> / 10.0
+    <h3 style="margin:0 0 10px 0; color:#c0392b; font-size:16px;">⚠️ Threat Detected</h3>
+    <div style="background:#fff3cd; color:#856404; padding:10px; border-radius:4px; margin-bottom:12px; font-size:13px; line-height:1.4;">
+      <strong>Why:</strong> ${verdict}
+      <br><br>
+      <em style="color:#555">We highlighted suspicious terms in the email for you.</em>
     </div>
-
-    <button id="clarity-unlock-btn" disabled style="
-      width: 100%; padding: 12px; border: none; border-radius: 6px;
-      background: #bdc3c7; color: white; font-weight: bold; cursor: not-allowed;
-      transition: background 0.3s;
-    ">
-      Wait 5s...
-    </button>
+    <div style="font-size:12px; margin-bottom:15px; color:#555;">
+      <strong>Risk Score:</strong> ${score}/10
+    </div>
+    <button id="unl-btn" disabled style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; color:white; font-weight:bold; cursor:not-allowed;">Wait 5s...</button>
   `;
 
   document.body.appendChild(alert);
 
-  // --- THE COUNTDOWN LOGIC ---
-  const btn = document.getElementById('clarity-unlock-btn');
-  let timeLeft = 5;
-
-  const timer = setInterval(() => {
-    timeLeft--;
-    btn.innerText = `Wait ${timeLeft}s...`;
-    
-    if (timeLeft <= 0) {
-      clearInterval(timer);
-      // ENABLE THE BUTTON
-      btn.disabled = false;
-      btn.innerText = "I have Verified (Unlock Links)";
-      btn.style.background = "#2c3e50"; // Turn dark blue
-      btn.style.cursor = "pointer";
+  let t = 5;
+  const i = setInterval(() => {
+    t--;
+    const btn = document.getElementById('unl-btn');
+    if(btn) btn.innerText = `Wait ${t}s...`;
+    if (t <= 0) {
+      clearInterval(i);
+      if(btn) {
+        btn.disabled = false; 
+        btn.innerText = "Unlock Links"; 
+        btn.style.background = "#2c3e50"; 
+        btn.style.cursor = "pointer";
+        btn.onclick = () => {
+          container.querySelectorAll('*').forEach(x => { x.style.filter = ""; x.style.pointerEvents = ""; });
+          alert.remove();
+        };
+      }
     }
   }, 1000);
-
-  // CLICK HANDLER
-  btn.onclick = () => {
-    unblur(container);
-    
-    // Mark as "Verified" so the scanner doesn't attack it again
-    container.classList.add('clarity-verified'); 
-    
-    // Remove the alert
-    alert.remove();
-  };
 }
 
-setInterval(scanEmail, 1500);
+// SCAN LOOP
+setInterval(scan, 1500);

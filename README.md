@@ -114,3 +114,8 @@ Clarity AI is designed with a **Privacy-First** philosophy:
 ## 📄 License
 
 Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
+
+**Created by:**  
+**Jeremiah Dighomanor**  
+*Threat Intel & Hunt | Clarity Specialist*
+                                          

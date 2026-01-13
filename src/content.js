@@ -1,7 +1,11 @@
 console.log("🚀 Clarity X-Ray: LOADED");
 
-// --- 1. CONFIGURATION: TRIGGER WORDS ---
-// These are the words the X-Ray looks for to explain the threat
+// --- 1. MEMORY: Prevent Re-Flagging ---
+// We use this Set to remember the "signatures" of emails you have already verified.
+// Even if Gmail refreshes the DOM, we will remember "I've seen this text before."
+const verifiedSignatures = new Set();
+
+// --- 2. CONFIGURATION: TRIGGER WORDS ---
 const TRIGGER_WORDS = [
   /verify your account/gi, /verify your identity/gi, /update your payment/gi,
   /log in/gi, /login/gi, /sign in/gi, /bank account/gi, /wire transfer/gi,
@@ -10,13 +14,13 @@ const TRIGGER_WORDS = [
   /credential/gi, /security alert/gi, /unauthorized/gi
 ];
 
-// --- 2. SELECTOR STRATEGY ---
+// --- 3. SELECTOR STRATEGY ---
 function getEmailData() {
   let container = null;
   let subject = "No Subject";
   let body = "";
 
-  // GMAIL (Try standard view first, then split view)
+  // GMAIL
   const gmailBody = document.querySelector('.a3s.aiL') || document.querySelector('.a3s'); 
   const gmailSubject = document.querySelector('h2.hP');
 
@@ -45,17 +49,29 @@ function getEmailData() {
   return { container, subject, body };
 }
 
-// --- 3. THE SCANNER ---
+// --- 4. THE SCANNER ---
 function scan() {
   const data = getEmailData();
   if (!data) return;
 
   const { container, subject, body } = data;
 
+  // GENERATE SIGNATURE: A unique ID for this specific email content
+  // We use Subject + Length of body to create a simple unique key
+  const signature = `${subject}_${body.length}`;
+
+  // CHECK 1: Have we already marked this specific element?
   if (container.classList.contains('clarity-checked') || 
       container.classList.contains('clarity-scanning')) return;
 
-  // VISUALS
+  // CHECK 2: Have we explicitly verified this content before? (The Fix)
+  if (verifiedSignatures.has(signature)) {
+    // Ideally, ensure it's unblurred if it was re-rendered
+    container.style.filter = "none";
+    return;
+  }
+
+  // START SCAN
   container.classList.add('clarity-scanning');
   showBadge();
   console.log(`👁️ X-RAY SCAN: ${subject}`);
@@ -78,25 +94,23 @@ function scan() {
       // A. Lock the Links
       applyBlur(container);
       
-      // B. Show the Warning (with explanation)
-      showWarning(container, res.score, res.verdict);
+      // B. Show the Warning (Pass the signature so we can whitelist it)
+      showWarning(container, res.score, res.verdict, signature);
       
-      // C. HIGHLIGHT THE TRIGGERS (The New X-Ray Feature)
+      // C. Highlight Triggers
       highlightTriggers(container);
     }
   });
 }
 
-// --- 4. THE X-RAY HIGHLIGHTER ---
+// --- 5. THE X-RAY HIGHLIGHTER ---
 function highlightTriggers(rootElement) {
   const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null, false);
   let node;
   const nodesToReplace = [];
 
-  // Find text nodes with bad words
   while (node = walker.nextNode()) {
     const text = node.nodeValue;
-    // Skip scripts/styles
     if (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE') continue;
 
     const hasTrigger = TRIGGER_WORDS.some(regex => regex.test(text));
@@ -105,7 +119,6 @@ function highlightTriggers(rootElement) {
     }
   }
 
-  // Apply highlights
   nodesToReplace.forEach(textNode => {
     const span = document.createElement('span');
     span.innerHTML = textNode.nodeValue;
@@ -122,7 +135,7 @@ function highlightTriggers(rootElement) {
   });
 }
 
-// --- 5. UI HELPERS ---
+// --- 6. UI HELPERS ---
 
 function showBadge() {
   if (document.getElementById('cl-badge')) return;
@@ -142,7 +155,8 @@ function applyBlur(el) {
   });
 }
 
-function showWarning(container, score, verdict) {
+// UPDATED: Now accepts 'signature' to save verification
+function showWarning(container, score, verdict, signature) {
   if (document.getElementById('cl-alert')) return;
 
   const alert = document.createElement('div');
@@ -182,8 +196,16 @@ function showWarning(container, score, verdict) {
         btn.style.background = "#2c3e50"; 
         btn.style.cursor = "pointer";
         btn.onclick = () => {
+          // 1. Unblock elements
           container.querySelectorAll('*').forEach(x => { x.style.filter = ""; x.style.pointerEvents = ""; });
+          
+          // 2. Remove Alert
           alert.remove();
+
+          // 3. THE FIX: Add this email's signature to the Verified List
+          // This ensures that even if the DOM refreshes, we won't flag this text again.
+          verifiedSignatures.add(signature);
+          console.log(`✅ Email verified by user. Signature added to safelist.`);
         };
       }
     }

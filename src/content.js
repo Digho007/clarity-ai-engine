@@ -1,5 +1,5 @@
 // src/content.js
-console.log("🛡️ Clarity AI: Pro Engine (Tuned for False Positives)");
+console.log("🛡️ Clarity AI: MAX SECURITY ENGINE (Aggressive Mode)");
 
 // --- 1. KILL SWITCH (Social Block) ---
 const BLOCKED_DOMAINS = [
@@ -10,8 +10,8 @@ if (BLOCKED_DOMAINS.some(d => window.location.hostname.includes(d))) {
   throw new Error("Clarity AI stopped: Domain Blocked.");
 }
 
-// --- 2. URL FILTER (Must look like email) ---
-const ALLOWED_KEYWORDS = ["mail", "webmail", "email", "inbox", "outlook", "zimbra"];
+// --- 2. URL FILTER ---
+const ALLOWED_KEYWORDS = ["mail", "webmail", "email", "inbox", "outlook", "zimbra", "office"];
 const isKnownProvider = ["google.com", "outlook", "yahoo", "office.com", "office365.com"].some(d => window.location.hostname.includes(d));
 const isGenericWebmail = ALLOWED_KEYWORDS.some(k => window.location.href.includes(k));
 
@@ -21,22 +21,22 @@ if (!isKnownProvider && !isGenericWebmail) {
 
 console.log("🚀 Clarity X-Ray: ACTIVE");
 
-// --- 3. TUNED TRIGGERS (Less Sensitive) ---
-// I removed generic words like "payment" or "login" alone. 
-// Now it focuses on HIGH RISK phrases.
+// --- 3. AGGRESSIVE TRIGGER WORDS (Restored) ---
+// We put back the broader terms like "login" and "password" to ensure nothing slips through.
 const TRIGGER_WORDS = [
-  /urgent action/gi, /immediate action/gi, /account suspended/gi, /account deactivated/gi, 
-  /verify your identity/gi, /confirm your password/gi, /unusual sign-in/gi, 
-  /wire transfer/gi, /security alert/gi, /final notice/gi
+  /urgent/gi, /immediate/gi, /action required/gi, /suspended/gi, /deactivated/gi, 
+  /verify/gi, /confirm/gi, /password/gi, /login/gi, /sign[- ]?in/gi, 
+  /invoice/gi, /payment/gi, /wire transfer/gi, /bank/gi, /security alert/gi,
+  /update your/gi, /unusual activity/gi, /credential/gi, /tax return/gi
 ];
 
 const verifiedSignatures = new Set();
 const flaggedSignatures = new Set(); 
 
-// --- 4. HEADER HUNTER (Outlook Fix) ---
+// --- 4. HEADER HUNTER (With Outlook Fix) ---
 function findEmailContext() {
   
-  // A. GMAIL (Standard)
+  // A. GMAIL
   const gmailSender = document.querySelector('.gD');
   if (gmailSender) {
     return {
@@ -47,64 +47,62 @@ function findEmailContext() {
     };
   }
 
-  // B. OUTLOOK / OFFICE 365 (The Fix)
-  // Outlook hides emails in 'title' attributes or specific Aria labels. 
-  // We search for ANY element in the header that has an '@' in its title.
+  // B. OUTLOOK / OFFICE 365 (Improved Selector)
+  // We check tooltips and multiple container types to find the hidden '@'
   const outlookContainer = document.querySelector('.ReadingPaneRoot') || 
-                           document.querySelector('[aria-label="Message body"]')?.closest('[role="main"]');
+                           document.querySelector('[aria-label="Message body"]')?.closest('[role="main"]') ||
+                           document.querySelector('.x_HO'); // Older OWA class
 
   if (outlookContainer || document.querySelector('div[id*="O365"]')) {
-    // Look for the sender in the header area
     const senderCandidates = document.querySelectorAll(
-      '[data-test-id="persona-details"] span, .O3L68, span[title*="@"]'
+      '[data-test-id="persona-details"] span, .O3L68, span[title*="@"], .Un15K'
     );
 
     for (let el of senderCandidates) {
-      // Check Visible Text OR Tooltip Text
       const text = el.innerText;
       const title = el.getAttribute("title") || "";
       
+      // If we find an @ in the text OR the tooltip, we lock on.
       if (text.includes("@") || title.includes("@")) {
-        // We found the sender!
         return {
-          sender: text.includes("@") ? text : title, // Prefer the one with the @
+          sender: text.includes("@") ? text : title,
           subject: document.querySelector('[data-test-id="full-view-subject"]')?.innerText || 
                    document.querySelector('.conv-title')?.innerText || "Subject",
-          // Try to grab the specific reading pane body
+          // Fallback Strategy for Body: Try specific aria-label, then class, then just the container
           bodyContainer: document.querySelector('[aria-label="Message body"]') || 
                          document.querySelector('.ReadingPaneRoot') ||
-                         document.body, // Fallback (careful with this)
+                         outlookContainer, 
           platform: "Outlook"
         };
       }
     }
   }
 
-  // C. GENERIC WEBMAIL (Strict '@' Check)
-  // Only runs if we haven't found Gmail or Outlook
-  const potentialSenders = document.querySelectorAll('.sender, .from, .email-header');
+  // C. GENERIC WEBMAIL (Universal)
+  const potentialSenders = document.querySelectorAll('.sender, .from, .email-header, [class*="sender"]');
   for (let el of potentialSenders) {
     if (el.innerText.includes("@")) {
-      const likelyBody = document.querySelector('.message-body, .msg-body, .body');
+      const likelyBody = document.querySelector('.message-body, .msg-body, .body, #message-content');
       if (likelyBody) return { sender: el.innerText, subject: document.title, bodyContainer: likelyBody, platform: "Webmail" };
     }
   }
   return null;
 }
 
-// --- 5. THE SCANNER LOOP ---
+// --- 5. SCANNER LOOP ---
 function scanEmail() {
   const data = findEmailContext();
   if (!data || !data.bodyContainer) return;
 
   const { sender, subject, bodyContainer, platform } = data;
   
-  // SAFETY CHECK: Ensure we aren't scanning the whole body of Outlook, just the message
+  // Prevent scanning the entire window by accident
   if (bodyContainer === document.body) return;
 
   const bodyText = bodyContainer.innerText;
   const signature = `${subject}_${bodyText.length}`;
 
+  // 1. CHECK HISTORY
   if (verifiedSignatures.has(signature)) {
     if (bodyContainer.style.filter !== "none") bodyContainer.style.filter = "none";
     return;
@@ -113,21 +111,20 @@ function scanEmail() {
   if (flaggedSignatures.has(signature)) {
     if (!bodyContainer.classList.contains('clarity-locked')) {
       applyBlur(bodyContainer);
-      if (!document.getElementById('cl-alert')) showWarning(bodyContainer, 8, "Threat Detected", signature);
+      if (!document.getElementById('cl-alert')) showWarning(bodyContainer, 8, "Threat Detected (Persisted)", signature);
     }
     return;
   }
 
   if (bodyContainer.classList.contains('clarity-scanning')) return;
 
-  // --- START SCAN ---
+  // 2. START SCAN
   bodyContainer.classList.add('clarity-scanning');
   showBadge(platform);
 
-  // 1. Structural Check (RELAXED)
+  // STRICT Structural Check
   const structRisk = checkStructuralRisk(bodyContainer, bodyText);
   
-  // 2. AI Check
   const fullText = `From: ${sender}\nSubject: ${subject}\n\n${bodyText}`;
   const links = Array.from(bodyContainer.querySelectorAll('a')).map(a => a.href);
 
@@ -139,10 +136,8 @@ function scanEmail() {
     bodyContainer.classList.remove('clarity-scanning');
     hideBadge();
 
-    // LOGIC TWEAK: AI Score must be > 7 OR Structural Risk must be severe
-    const aiThreat = res && res.isThreat && res.score > 7; 
-    const isRisk = aiThreat || structRisk.isThreat;
-    
+    // STRICT SCORING: If AI says "Threat" (even low score) OR Structure is bad -> FLAG IT.
+    const isRisk = (res && res.isThreat) || structRisk.isThreat;
     const verdict = structRisk.isThreat ? structRisk.reason : (res ? res.verdict : "");
     const score = res ? res.score : (structRisk.isThreat ? 9 : 0);
 
@@ -159,16 +154,15 @@ function scanEmail() {
 
 // --- HELPERS ---
 
-// UPDATED: Much less sensitive. 
-// Only flags if text is TINY (<30 chars) AND has an image.
-// Normal emails ("Thanks, see you then") will pass now.
+// Reverted to STRICT Rule:
+// Flags if text is less than 50 chars AND has more than 1 link/image.
 function checkStructuralRisk(container, text) {
   const links = container.querySelectorAll('a').length;
   const images = container.querySelectorAll('img').length;
-  const cleanText = text.replace(/\s/g, "").length; // Count actual letters, not spaces
+  const len = text.trim().length;
 
-  if (cleanText < 30 && images > 0 && links > 0) {
-    return { isThreat: true, reason: "Suspicious: Image-only email detected." };
+  if (len < 50 && (links > 1 || images > 1)) {
+    return { isThreat: true, reason: "Suspicious: Low text content with links/images." };
   }
   return { isThreat: false };
 }
@@ -193,7 +187,7 @@ function showBadge(platform) {
   if (document.getElementById('cl-badge')) return;
   const b = document.createElement('div');
   b.id = 'cl-badge';
-  b.innerText = `🛡️ Clarity AI (${platform})`;
+  b.innerText = `🛡️ Scanning (${platform})...`;
   b.style.cssText = "position:fixed; bottom:20px; right:20px; background:#f1c40f; color:#333; padding:8px 12px; border-radius:20px; font-weight:bold; z-index:99999; font-family:sans-serif; font-size:12px; box-shadow:0 2px 5px rgba(0,0,0,0.2);";
   document.body.appendChild(b);
 }

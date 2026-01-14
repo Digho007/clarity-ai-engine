@@ -14,16 +14,16 @@
         "<all_urls>"
       ],
       "js": [
-        "src/content.js"
+        "content.js"
       ],
       "run_at": "document_idle"
     }
   ],
   "background": {
-    "service_worker": "src/background.js"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "src/popup.html"
+    "default_popup": "popup.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"

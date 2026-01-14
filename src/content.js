@@ -1,82 +1,87 @@
-console.log("🚀 Clarity X-Ray: LOADED");
+console.log("🚀 Clarity X-Ray: EMAIL MODE ACTIVE (Sender Scanning Enabled)");
 
-// --- 1. MEMORY: Prevent Re-Flagging ---
-// We use this Set to remember the "signatures" of emails you have already verified.
-// Even if Gmail refreshes the DOM, we will remember "I've seen this text before."
-const verifiedSignatures = new Set();
-
-// --- 2. CONFIGURATION: TRIGGER WORDS ---
+// --- 1. CONFIGURATION ---
 const TRIGGER_WORDS = [
   /verify your account/gi, /verify your identity/gi, /update your payment/gi,
   /log in/gi, /login/gi, /sign in/gi, /bank account/gi, /wire transfer/gi,
   /suspended/gi, /deactivated/gi, /urgent/gi, /immediate action/gi,
-  /click here/gi, /social media/gi, /facebook/gi, /password/gi,
-  /credential/gi, /security alert/gi, /unauthorized/gi
+  /click here/gi, /password/gi, /credential/gi, /security alert/gi
 ];
 
-// --- 3. SELECTOR STRATEGY ---
-function getEmailData() {
-  let container = null;
-  let subject = "No Subject";
-  let body = "";
+// Memory to prevent re-scanning the same email while you read it
+const verifiedSignatures = new Set();
 
+// --- 2. SELECTOR STRATEGY (Gmail & Outlook) ---
+function getEmailData() {
   // GMAIL
   const gmailBody = document.querySelector('.a3s.aiL') || document.querySelector('.a3s'); 
   const gmailSubject = document.querySelector('h2.hP');
+  const gmailSender = document.querySelector('.gD'); // Selects the sender name/email wrapper
 
   // OUTLOOK
   const outlookBody = document.querySelector('[aria-label="Message body"]');
   const outlookSubject = document.querySelector('.conv-title');
+  // Outlook is tricky; this targets the sender line, but might need adjustment based on their updates
+  const outlookSender = document.querySelector('.O3L68') || document.querySelector('.Un15K'); 
 
-  // GENERIC
-  const genericBody = document.querySelector('.message-body, .msg-body, article');
+  // GENERIC (Fallbacks)
+  const genericBody = document.querySelector('.message-body, article');
+
+  let sender = "Unknown Sender";
+  let subject = "No Subject";
+  let body = "";
+  let container = null;
 
   if (gmailBody) {
     container = gmailBody;
     if (gmailSubject) subject = gmailSubject.innerText;
-    body = container.innerText;
+    if (gmailSender) {
+      // Grab both name and the email attribute: "John Doe <john@example.com>"
+      sender = `${gmailSender.innerText} <${gmailSender.getAttribute("email") || "hidden"}>`;
+    }
+    body = gmailBody.innerText;
   } else if (outlookBody) {
     container = outlookBody;
     if (outlookSubject) subject = outlookSubject.innerText;
-    body = container.innerText;
+    if (outlookSender) sender = outlookSender.innerText;
+    body = outlookBody.innerText;
   } else if (genericBody) {
     container = genericBody;
-    body = container.innerText;
+    body = genericBody.innerText;
   } else {
     return null;
   }
 
-  return { container, subject, body };
+  return { container, sender, subject, body };
 }
 
-// --- 4. THE SCANNER ---
-function scan() {
+// --- 3. THE SCANNER ---
+function scanEmail() {
   const data = getEmailData();
-  if (!data) return;
+  if (!data) return; // No email open right now
 
-  const { container, subject, body } = data;
-
-  // GENERATE SIGNATURE: A unique ID for this specific email content
-  // We use Subject + Length of body to create a simple unique key
+  const { container, sender, subject, body } = data;
+  
+  // Create a unique ID for this email content
   const signature = `${subject}_${body.length}`;
 
-  // CHECK 1: Have we already marked this specific element?
+  // A. Skip if already processed in DOM
   if (container.classList.contains('clarity-checked') || 
       container.classList.contains('clarity-scanning')) return;
 
-  // CHECK 2: Have we explicitly verified this content before? (The Fix)
+  // B. Skip if user already verified this specific email
   if (verifiedSignatures.has(signature)) {
-    // Ideally, ensure it's unblurred if it was re-rendered
     container.style.filter = "none";
     return;
   }
 
-  // START SCAN
+  // C. Start Analysis
   container.classList.add('clarity-scanning');
   showBadge();
-  console.log(`👁️ X-RAY SCAN: ${subject}`);
+  console.log(`👁️ Scanning: ${subject} (From: ${sender})`);
 
-  const fullText = `Subject: ${subject}\n\n${body}`;
+  // NEW: Include Sender in the text analysis so AI can detect spoofing
+  const fullText = `From: ${sender}\nSubject: ${subject}\n\n${body}`;
   const links = Array.from(container.querySelectorAll('a')).map(a => a.href);
 
   chrome.runtime.sendMessage({ 
@@ -89,21 +94,22 @@ function scan() {
     hideBadge();
 
     if (res && res.isThreat) {
-      console.log(`🚨 THREAT DETECTED: Executing X-Ray Highlights...`);
+      console.log(`🚨 THREAT DETECTED: ${res.verdict}`);
       
-      // A. Lock the Links
+      // 1. The Cognitive Pause (Blur Links)
       applyBlur(container);
       
-      // B. Show the Warning (Pass the signature so we can whitelist it)
+      // 2. The Warning Modal
       showWarning(container, res.score, res.verdict, signature);
       
-      // C. Highlight Triggers
+      // 3. Highlight Trigger Words
       highlightTriggers(container);
     }
   });
 }
 
-// --- 5. THE X-RAY HIGHLIGHTER ---
+// --- 4. UI HELPERS ---
+
 function highlightTriggers(rootElement) {
   const walker = document.createTreeWalker(rootElement, NodeFilter.SHOW_TEXT, null, false);
   let node;
@@ -112,30 +118,20 @@ function highlightTriggers(rootElement) {
   while (node = walker.nextNode()) {
     const text = node.nodeValue;
     if (node.parentElement.tagName === 'SCRIPT' || node.parentElement.tagName === 'STYLE') continue;
-
-    const hasTrigger = TRIGGER_WORDS.some(regex => regex.test(text));
-    if (hasTrigger) {
-      nodesToReplace.push(node);
-    }
+    if (TRIGGER_WORDS.some(regex => regex.test(text))) nodesToReplace.push(node);
   }
 
   nodesToReplace.forEach(textNode => {
     const span = document.createElement('span');
     span.innerHTML = textNode.nodeValue;
-    
     TRIGGER_WORDS.forEach(regex => {
       span.innerHTML = span.innerHTML.replace(regex, (match) => {
-        return `<span style="background-color: #fadbd8; border-bottom: 2px solid #c0392b; color: #c0392b; font-weight: bold; padding: 0 2px; border-radius: 2px;">${match}</span>`;
+        return `<span style="background-color: #fadbd8; border-bottom: 2px solid #c0392b; color: #c0392b; font-weight: bold;">${match}</span>`;
       });
     });
-
-    if (textNode.parentNode) {
-      textNode.parentNode.replaceChild(span, textNode);
-    }
+    if (textNode.parentNode) textNode.parentNode.replaceChild(span, textNode);
   });
 }
-
-// --- 6. UI HELPERS ---
 
 function showBadge() {
   if (document.getElementById('cl-badge')) return;
@@ -155,10 +151,8 @@ function applyBlur(el) {
   });
 }
 
-// UPDATED: Now accepts 'signature' to save verification
 function showWarning(container, score, verdict, signature) {
   if (document.getElementById('cl-alert')) return;
-
   const alert = document.createElement('div');
   alert.id = 'cl-alert';
   alert.style.cssText = `
@@ -167,20 +161,12 @@ function showWarning(container, score, verdict, signature) {
     box-shadow: 0 10px 40px rgba(0,0,0,0.4); border-left: 6px solid #c0392b;
     z-index: 2147483647; font-family: sans-serif; animation: slideIn 0.3s;
   `;
-  
   alert.innerHTML = `
-    <h3 style="margin:0 0 10px 0; color:#c0392b; font-size:16px;">⚠️ Threat Detected</h3>
-    <div style="background:#fff3cd; color:#856404; padding:10px; border-radius:4px; margin-bottom:12px; font-size:13px; line-height:1.4;">
-      <strong>Why:</strong> ${verdict}
-      <br><br>
-      <em style="color:#555">We highlighted suspicious terms in the email for you.</em>
-    </div>
-    <div style="font-size:12px; margin-bottom:15px; color:#555;">
-      <strong>Risk Score:</strong> ${score}/10
-    </div>
-    <button id="unl-btn" disabled style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; color:white; font-weight:bold; cursor:not-allowed;">Wait 5s...</button>
+    <h3 style="margin:0 0 10px 0; color:#c0392b;">⚠️ Threat Detected</h3>
+    <p style="font-size:13px; color:#555;">${verdict}</p>
+    <div style="font-size:12px; margin-bottom:10px; color:#777;">Risk Score: ${score}/10</div>
+    <button id="unl-btn" disabled style="width:100%; padding:10px; background:#ccc; border:none; border-radius:4px; color:white; font-weight:bold;">Wait 5s...</button>
   `;
-
   document.body.appendChild(alert);
 
   let t = 5;
@@ -191,26 +177,16 @@ function showWarning(container, score, verdict, signature) {
     if (t <= 0) {
       clearInterval(i);
       if(btn) {
-        btn.disabled = false; 
-        btn.innerText = "Unlock Links"; 
-        btn.style.background = "#2c3e50"; 
-        btn.style.cursor = "pointer";
+        btn.disabled = false; btn.innerText = "Unlock Links"; btn.style.background = "#2c3e50"; btn.style.cursor = "pointer";
         btn.onclick = () => {
-          // 1. Unblock elements
           container.querySelectorAll('*').forEach(x => { x.style.filter = ""; x.style.pointerEvents = ""; });
-          
-          // 2. Remove Alert
           alert.remove();
-
-          // 3. THE FIX: Add this email's signature to the Verified List
-          // This ensures that even if the DOM refreshes, we won't flag this text again.
           verifiedSignatures.add(signature);
-          console.log(`✅ Email verified by user. Signature added to safelist.`);
         };
       }
     }
   }, 1000);
 }
 
-// SCAN LOOP
-setInterval(scan, 1500);
+// Run scanner loop every 1.5 seconds
+setInterval(scanEmail, 1500);

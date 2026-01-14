@@ -4,7 +4,9 @@
   "version": "1.0",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage",
+    "alarms"
   ],
   "content_scripts": [
     {
@@ -12,18 +14,18 @@
         "<all_urls>"
       ],
       "js": [
-        "content.js"
+        "src/content.js"
       ],
       "run_at": "document_idle"
     }
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "src/popup.html"
   },
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  },
-  "background": {
-    "service_worker": "background.js"
   }
 }
